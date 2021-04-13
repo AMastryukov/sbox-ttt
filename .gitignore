@@ -1,0 +1,7 @@
+.codegen/
+obj/
+code/accesslist.txt
+Properties
+codegen-*
+sbox-ttt.csproj
+.vs
