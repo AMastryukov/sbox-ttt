@@ -7,12 +7,12 @@ using System.Threading.Tasks;
 
 namespace TTTGamemode
 {
-    public class PlayerRagdoll : ModelEntity
+    public class Body : ModelEntity
     {
         public Player Player { get; set; }
         public bool Identified { get; set; } = false;
 
-        public PlayerRagdoll()
+        public Body()
         {
             MoveType = MoveType.Physics;
             UsePhysicsCollision = true;

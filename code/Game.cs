@@ -30,6 +30,8 @@ namespace TTTGamemode
         [Net] public Round CurrentRound => Game.Round.Waiting;
         [Net] public int TimeRemaining => 0;
 
+        public KarmaSystem Karma => new KarmaSystem();
+
         #region TTT Methods
         private void ChangeRound(Round round)
         {
@@ -76,12 +78,12 @@ namespace TTTGamemode
                     }
                     #endregion
 
-                    // TODO: Start tracking karma
+                    Karma.IsTracking = true;
                     break;
 
                 case Game.Round.PostRound:
                     TimeRemaining = TTTPostRoundTime;
-                    // TODO: Disable karma tracking for le epic RDM
+                    Karma.IsTracking = false;
                     break;
             }
 
@@ -107,9 +109,39 @@ namespace TTTGamemode
         {
             if (CurrentRound != Round.InProgress) return;
 
-            // TODO: Check if all traitors are dead
+            bool traitorsDead = true;
+            bool innocentsDead = true;
 
-            // TODO: Check if all innocents are dead
+            Player player;
+            for (int i = 0; i < Sandbox.Player.All.Count; i++)
+            {
+                player = Sandbox.Player.All[i] as Player;
+
+                if (player.Role == player.Role.Traitor && player.LifeState == LifeState.Alive)
+                {
+                    traitorsDead = false;
+                }
+
+                if (player.Role != player.Role.Traitor && player.LifeState == LifeState.Alive)
+                {
+                    innocentsDead = false;
+                }
+            }
+
+            if (innocentsDead)
+            {
+                // TODO: Display traitor victory
+
+                ChangeRound(Round.PostRound);
+                return;
+            }
+
+            if (traitorsDead)
+            {
+                // TODO: Display innocent victory
+
+                ChangeRound(Round.PostRound);
+            }
         }
 
         private void UpdateRoundTimer()
@@ -182,6 +214,17 @@ namespace TTTGamemode
             CheckRoundState();
 
             base.PlayerKilled(player);
+        }
+
+        public override void PlayerJoined(Player player)
+        {
+            if (Karma.IsBanned(player))
+            {
+                KickPlayer(player);
+                return;
+            }
+
+            base.PlayerJoined();
         }
 
         public override void PlayerDisconnected(Sandbox.Player player, NetworkDisconnectionReason reason)

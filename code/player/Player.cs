@@ -8,8 +8,9 @@ namespace TTTGamemode
     {
         public enum Role { None, Innocent, Detective, Traitor }
 
-        public PlayerRagdoll Ragdoll { get; set; }
-        public Role PlayerRole { get; set; }
+        public Body Body { get; set; }
+        public Role Role { get; set; }
+        public int Credits { get; set; }
 
         private TimeSince _timeSinceDropped;
         private DamageInfo _lastDamageInfo;
@@ -19,7 +20,8 @@ namespace TTTGamemode
             Inventory = new Inventory(this);
             Animator = new StandardPlayerAnimator();
 
-            PlayerRole = Role.None;
+            Role = Role.None;
+            Credits = 0;
         }
 
         public bool IsSpectator
@@ -41,7 +43,7 @@ namespace TTTGamemode
 
         public override void Respawn()
         {
-            RemoveRagdollEntity();
+            RemoveBodyEntity();
 
             base.Respawn();
         }
@@ -50,7 +52,7 @@ namespace TTTGamemode
         {
             base.OnKilled();
 
-            BecomeRagdollOnServer(_lastDamageInfo.Force, GetHitboxBone(_lastDamageInfo.HitboxIndex));
+            CreateBodyOnServer(_lastDamageInfo.Force, GetHitboxBone(_lastDamageInfo.HitboxIndex));
             Inventory.DeleteContents();
             MakeSpectator();
         }
@@ -103,12 +105,22 @@ namespace TTTGamemode
                 .Radius(2)
                 .Run();
 
-            if (trace.Hit && trace.Entity is PlayerCorpse corpse && corpse.Player != null)
+            if (trace.Hit && trace.Entity is Body body && body.Player != null)
             {
-                // TODO: If unidentified, identify the body
-                corpse.Identified = true;
+                // Scoop up the credits on the body
+                if (Role == Role.Traitor)
+                {
+                    Credits += body.Player.Credits;
+                    body.Player.Credits = 0;
+                }
 
-                // TODO: Bring up inspection menu for the player
+                // Allow traitors to inspect body without identifying it by holding crouch
+                if (!(Role == Role.Traitor && Input.Down(InputButton.Crouch)))
+                {
+                    body.Identified = true;
+                }
+
+                InspectedBody(body);
             }
         }
 
@@ -122,10 +134,10 @@ namespace TTTGamemode
 
             if (info.Attacker is Player attacker && attacker != this)
             {
-                attacker.DidDamage(attacker, info.Position, info.Damage, ((float)Health).LerpInverse(100, 0));
+                attacker.DidDamage(info.Position, info.Damage, ((float)Health).LerpInverse(100, 0));
             }
 
-            TookDamage(this, info.Weapon.IsValid() ? info.Weapon.WorldPos : info.Attacker.WorldPos);
+            TookDamage(info.Weapon.IsValid() ? info.Weapon.WorldPos : info.Attacker.WorldPos);
 
             // Play pain sounds
             if ((info.Flags & DamageFlags.Fall) == DamageFlags.Fall)
@@ -142,7 +154,7 @@ namespace TTTGamemode
             base.TakeDamage(info);
         }
 
-        private void BecomeRagdollOnServer(Vector3 force, int forceBone)
+        private void CreateBodyOnServer(Vector3 force, int forceBone)
         {
             var ragdoll = new PlayerCorpse
             {
@@ -154,15 +166,15 @@ namespace TTTGamemode
             ragdoll.ApplyForceToBone(force, forceBone);
             ragdoll.Player = this;
 
-            Ragdoll = ragdoll;
+            Body = ragdoll;
         }
 
-        public void RemoveRagdollEntity()
+        public void RemoveBodyEntity()
         {
-            if (Ragdoll != null && Ragdoll.IsValid())
+            if (Body != null && Body.IsValid())
             {
-                Ragdoll.Delete();
-                Ragdoll = null;
+                Body.Delete();
+                Body = null;
             }
         }
 
@@ -181,17 +193,17 @@ namespace TTTGamemode
             DamageIndicator.Current?.OnHit(position);
         }
 
-        protected override void OnRemove()
+        [ClientRpc]
+        public void InspectedBody(Body body)
         {
-            RemoveRagdollEntity();
-
-            base.OnRemove();
+            // TODO: Display body inspection UI
         }
 
-        [OwnerRpc]
-        protected void UpdateFps(int fps)
+        protected override void OnRemove()
         {
-            SetScore("fps", fps);
+            RemoveBodyEntity();
+
+            base.OnRemove();
         }
     }
 }
