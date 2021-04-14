@@ -6,15 +6,13 @@ namespace TTTGamemode
 {
     public partial class Player : BasePlayer
     {
+        public enum Role { None, Innocent, Detective, Traitor }
+
         public PlayerRagdoll Ragdoll { get; set; }
+        public Role PlayerRole { get; set; } = Role.NONE;
 
         private TimeSince _timeSinceDropped;
         private DamageInfo _lastDamageInfo;
-
-        public bool HasTeam
-        {
-            get => Team != null;
-        }
 
         public Player()
         {
@@ -51,8 +49,8 @@ namespace TTTGamemode
             base.OnKilled();
 
             BecomeRagdollOnServer(_lastDamageInfo.Force, GetHitboxBone(_lastDamageInfo.HitboxIndex));
-
             Inventory.DeleteContents();
+            MakeSpectator();
         }
 
         protected override void Tick()
