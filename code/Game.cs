@@ -1,4 +1,5 @@
-﻿using Sandbox;
+﻿using System;
+using Sandbox;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -45,7 +46,37 @@ namespace TTTGamemode
 
                 case Game.Round.InProgress:
                     TimeRemaining = TTTRoundTime;
-                    // TODO: Give players a role, start tracking karma
+
+                    #region Select Roles
+                    int detectiveCount = (int)((float)Sandbox.Player.All.Count * 0.125f);
+                    int traitorCount = (int)Math.Max((float)Sandbox.Player.All.Count * 0.25f, 1f);
+
+                    List<Player> _players = Sandbox.Player.ConvertAll(p => (Player)p);
+                    Random random = new Random();
+
+                    for (int i = 0; i < detectiveCount; i++)
+                    {
+                        int randomID = random.Next(_players.Count);
+                        _players[randomID].PlayerRole = Player.Role.Detective;
+                        _players.Remove(Players[randomID]);
+                    }
+
+                    // SELECT TRAITORS
+                    for (int i = 0; i < traitorCount; i++)
+                    {
+                        int randomID = random.Next(_players.Count);
+                        _players[randomID].PlayerRole = Player.Role.Traitor;
+                        _players.Remove(Players[randomID]);
+                    }
+
+                    // SET REMAINING PLAYERS TO INNOCENT
+                    for (int i = 0; i < _players.Count; i++)
+                    {
+                        _players[i].PlayerRole = Player.Role.Innocent;
+                    }
+                    #endregion
+
+                    // TODO: Start tracking karma
                     break;
 
                 case Game.Round.PostRound:

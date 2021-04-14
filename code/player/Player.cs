@@ -9,7 +9,7 @@ namespace TTTGamemode
         public enum Role { None, Innocent, Detective, Traitor }
 
         public PlayerRagdoll Ragdoll { get; set; }
-        public Role PlayerRole { get; set; } = Role.NONE;
+        public Role PlayerRole { get; set; }
 
         private TimeSince _timeSinceDropped;
         private DamageInfo _lastDamageInfo;
@@ -18,6 +18,8 @@ namespace TTTGamemode
         {
             Inventory = new Inventory(this);
             Animator = new StandardPlayerAnimator();
+
+            PlayerRole = Role.None;
         }
 
         public bool IsSpectator
