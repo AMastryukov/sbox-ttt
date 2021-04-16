@@ -1,5 +1,6 @@
 ﻿using Sandbox;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace TTTGamemode
@@ -9,8 +10,8 @@ namespace TTTGamemode
         public enum Role { None, Innocent, Detective, Traitor }
 
         public Body Body { get; set; }
-        public Role Role { get; set; }
-        public int Credits { get; set; }
+        public Role Role { get; set; } = Player.Role.None;
+        public int Credits { get; set; } = 0;
 
         private TimeSince _timeSinceDropped;
         private DamageInfo _lastDamageInfo;
@@ -148,6 +149,9 @@ namespace TTTGamemode
             {
                 PlaySound("grunt" + Rand.Int(1, 4));
             }
+
+            // Register player damage with the Karma system
+            Game.Instance?.Karma?.RegisterPlayerDamage(info.Attacker, this, info.Damage);
 
             _lastDamageInfo = info;
 

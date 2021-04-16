@@ -27,41 +27,69 @@ namespace TTTGamemode
         [ServerVar("ttt_karma_penalty_max", Help = "The maximum amount of karma loss per player.")]
         public static int TTTKarmaPenaltyMax { get; set; } = 100;
 
-        [Net] public Dictionary<string, int> Records => new Dictionary<string, int>();
+        [Net] public Dictionary<string, int> KarmaRecords => new();
+        [Net] public Dictionary<(string, string), int> DamageRecords => new();
         [Net] public bool IsTracking = false;
 
         public void RegisterPlayer(Player player)
         {
-            if (Records.ContainsKey(player)) return;
+            if (KarmaRecords.ContainsKey(player)) return;
 
-            Records[player] = TTTKarmaDefault;
+            KarmaRecords[player] = TTTKarmaDefault;
         }
 
-        public void OnDamageDealt(Player attacker, float damage)
+        public void RegisterPlayerDamage(Player attacker, Player victim, int damage)
         {
-            // Calculate karma loss
-            int karmaLoss = (int)(damage * TTTKarmaLoss);
-            karmaLoss = karmaLoss > TTTKarmaPenaltyMax ? TTTKarmaPenaltyMax : karmaLoss;
+            if (!IsTracking) return;
 
-            UpdatePlayerKarma(attacker, -karmaLoss);
+            int updatedDamage = 0;
+            DamageRecords.TryGetValue((attacker.SteamId, victim.SteamId), out updatedDamage);
+
+            updatedDamage += damage;
+            updatedDamage = Math.Min(updatedDamage, 100);
+
+            DamageRecords[(attacker.SteamId, victim.SteamId)] = updatedDamage;
         }
 
         public void UpdatePlayerKarma(Player player, int delta)
         {
-            if (!IsTracking) return;
+            UpdateSteamIdKarma(player.SteamId, delta);
+        }
 
-            int updatedKarma = Records[player.SteamId];
+        public void UpdateSteamIdKarma(string steamId, int delta)
+        {
+            int updatedKarma = 0;
+            KarmaRecords.TryGetValue(steamId, out updatedKarma);
+
             updatedKarma += delta;
 
             updatedKarma = updatedKarma > TTTKarmaMax ? TTTKarmaMax : updatedKarma;
             updatedKarma = updatedKarma < TTTKarmaMin ? TTTKarmaMin : updatedKarma;
 
-            Records[player.SteamId] = updatedKarma;
+            KarmaRecords[player.SteamId] = updatedKarma;
+        }
+
+        public void ResolveKarma()
+        {
+            if (!IsTracking)
+            {
+                DamageRecords = new();
+                return;
+            }
+
+            // Update karma records based on the damage done this round
+            foreach (var record in DamageRecords)
+            {
+                UpdateSteamIdKarma(record.Key.Item1, record.Value);
+            }
+
+            // Clear all damage records
+            DamageRecords = new();
         }
 
         public bool IsBanned(Player player)
         {
-            return (Records[player.SteamId] < TTTKarmaMin && TTTKarmaBan);
+            return (KarmaRecords[player.SteamId] < TTTKarmaMin && TTTKarmaBan);
         }
     }
 }

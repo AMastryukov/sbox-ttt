@@ -39,6 +39,8 @@ namespace TTTGamemode
             {
                 case Game.Round.Waiting:
                     TimeRemaining = 0;
+                    Karma.IsTracking = false;
+
                     break;
 
                 case Game.Round.PreRound:
@@ -56,6 +58,7 @@ namespace TTTGamemode
                     List<Player> _players = Sandbox.Player.ConvertAll(p => (Player)p);
                     Random random = new Random();
 
+                    // SELECT DETECTIVES
                     for (int i = 0; i < detectiveCount; i++)
                     {
                         int randomID = random.Next(_players.Count);
@@ -83,6 +86,8 @@ namespace TTTGamemode
 
                 case Game.Round.PostRound:
                     TimeRemaining = TTTPostRoundTime;
+
+                    Karma.ResolveKarma();
                     Karma.IsTracking = false;
                     break;
             }
